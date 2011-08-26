@@ -93,23 +93,22 @@ public class ProcessJob extends AbstractProcessJob implements Job {
             int exitCode = -999;
             try {
                 exitCode = _process.waitFor();
-            } catch(InterruptedException e) {
-            }
+                
+                _isComplete = true;
+                if(exitCode != 0) {
+                    for (File file: propFiles)   if (file != null && file.exists()) file.delete();
+                    destroyProcess();
+                    throw new RuntimeException("Processes ended with exit code " + exitCode + ".");
+                }
 
-            // try to wait for everything to get logged out before exiting
-            try {
+                // try to wait for everything to get logged out before exiting
                 outputGobbler.join(1000);
                 errorGobbler.join(1000);
+                
             } catch(InterruptedException e) {
+            } finally {
                 outputGobbler.close();
                 errorGobbler.close();
-            }
-
-            _isComplete = true;
-            if(exitCode != 0) {
-                for (File file: propFiles)   if (file != null && file.exists()) file.delete();
-                destroyProcess();
-                throw new RuntimeException("Processes ended with exit code " + exitCode + ".");
             }
 
         }
