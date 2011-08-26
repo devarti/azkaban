@@ -77,9 +77,9 @@ public class ProcessJob extends AbstractProcessJob implements Job {
                 for (File file: propFiles)   if (file != null && file.exists()) file.delete();
                 throw new RuntimeException(e);
             }
-            Thread outputGobbler = new LoggingGobbler(new InputStreamReader(_process.getInputStream()),
+            LoggingGobbler outputGobbler = new LoggingGobbler(new InputStreamReader(_process.getInputStream()),
                                                       Level.INFO);
-            Thread errorGobbler = new LoggingGobbler(new InputStreamReader(_process.getErrorStream()),
+            LoggingGobbler errorGobbler = new LoggingGobbler(new InputStreamReader(_process.getErrorStream()),
                                                      Level.ERROR);
 
             int processId = getProcessId();
@@ -96,18 +96,22 @@ public class ProcessJob extends AbstractProcessJob implements Job {
             } catch(InterruptedException e) {
             }
 
-            _isComplete = true;
-            if(exitCode != 0) {
-                for (File file: propFiles)   if (file != null && file.exists()) file.delete();
-                throw new RuntimeException("Processes ended with exit code " + exitCode + ".");
-            }
-
             // try to wait for everything to get logged out before exiting
             try {
                 outputGobbler.join(1000);
                 errorGobbler.join(1000);
             } catch(InterruptedException e) {
+                outputGobbler.close();
+                errorGobbler.close();
             }
+
+            _isComplete = true;
+            if(exitCode != 0) {
+                for (File file: propFiles)   if (file != null && file.exists()) file.delete();
+                destroyProcess();
+                throw new RuntimeException("Processes ended with exit code " + exitCode + ".");
+            }
+
         }
         
         // Get the output properties from this job.
@@ -115,9 +119,22 @@ public class ProcessJob extends AbstractProcessJob implements Job {
                
        for (File file: propFiles)
            if (file != null && file.exists()) file.delete();
+       
+       destroyProcess();       
     
     }
-       
+
+
+    private void destroyProcess() {
+        try {
+            _process.getInputStream().close();
+            _process.getOutputStream().close();
+            _process.getErrorStream().close();
+            _process.destroy();
+        } catch (IOException e) {
+            error("Error cleaning up process", e);
+        }
+    }       
 
     protected List<String> getCommandList() {
         List<String> commands = new ArrayList<String>();
@@ -226,6 +243,16 @@ public class ProcessJob extends AbstractProcessJob implements Job {
                 getLog().log(_loggingLevel, message);
             }
 
+        }
+        
+        public void close() {
+            if (_inputReader != null) {
+                try {
+                    _inputReader.close();
+                } catch (IOException e) {
+                    error("Error cleaning up logging stream reader:", e);
+                }
+            }
         }
     }
 
