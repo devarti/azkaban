@@ -90,7 +90,7 @@ public class JobManagerServlet extends AbstractAzkabanServlet {
             String deployPath = (String) params.get("path");
             File jobDir = unzipFile(item);
 
-            jobManager.deployJobDir(jobDir.getAbsolutePath(), deployPath);
+            jobManager.deployJobDir(jobDir.getAbsolutePath(), deployPath, getApplication().getScheduleManager());
         } catch (Exception e) {
             log.info("Installation Failed.", e);
             String redirectError = (String)params.get("redirect_error");

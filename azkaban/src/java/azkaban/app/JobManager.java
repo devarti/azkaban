@@ -22,6 +22,10 @@ import azkaban.common.utils.UndefinedPropertyException;
 import azkaban.common.utils.Utils;
 import azkaban.flow.FlowManager;
 import azkaban.jobs.JobExecution;
+import azkaban.scheduler.LocalFileScheduleLoader;
+import azkaban.scheduler.ScheduleLoader;
+import azkaban.scheduler.ScheduleManager;
+import azkaban.scheduler.ScheduledJob;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
@@ -496,7 +500,7 @@ public class JobManager {
         manager.reload();
     }
 
-    public void deployJobDir(String localPath, String destPath) {
+    public void deployJobDir(String localPath, String destPath, ScheduleManager scheduleManager) {
         File targetPath = new File(this._jobDirs.get(0), destPath);
         verifyPathValidity(new File(localPath), targetPath);
         if(targetPath.exists()) {
@@ -519,7 +523,37 @@ public class JobManager {
                                        + " could not be moved to " + destPath);
 
         updateFlowManager();
+        
+        loadJobDirSchedule(scheduleManager, targetPath);
+        
     }
+    
+	/**
+	 * method tries to find jobs.schedule file in the job directory, parses it
+	 * and schedules every job from the file.
+	 */
+	private void loadJobDirSchedule(ScheduleManager scheduleManager,
+			File jobPath) {
+
+		File scheduleFile = new File(jobPath + File.separator + "jobs.schedule");
+
+		if (!scheduleFile.exists()) {
+			logger.info("Custom schedule file was not found");
+			return;
+		}
+
+		logger.info("Loading schedules from custom schedule file = "
+				+ scheduleFile.getAbsolutePath());
+
+		ScheduleLoader scheduleLoader = new LocalFileScheduleLoader(
+				scheduleFile, new File("jobs.schedule.backup"));
+		List<ScheduledJob> scheduledJobs = scheduleLoader.loadSchedule();
+
+		for (ScheduledJob job : scheduledJobs) {
+			logger.info("Scheduling job. ID = " + job.getId());
+			scheduleManager.schedule(job);
+		}
+	}    
 
     public void deployJob(String jobName, String path, Props props) {
         File jobPath = new File(_jobDirs.get(0), path);
