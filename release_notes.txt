@@ -1,3 +1,10 @@
+Release Notes - Azkaban - Version 0.10.1
+
+** Improvement
+    * log4j - log file rotation by date and size
+    * Job schedule information can be uploaded within the job zip file
+
+
 Release Notes - Azkaban - Version 0.10
 
 
