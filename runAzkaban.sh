@@ -40,7 +40,7 @@ fi
 
 function show_vers() {
   echo
-  echo runAzkaban.sh v$RUNAZ_VERSION maintainer: \<ss-tools\@streamsage.com\>
+  echo runAzkaban.sh v$RUNAZ_VERSION maintainer: \<dpathak7\@gmail.com\>
   echo
 }
 
